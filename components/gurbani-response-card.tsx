@@ -61,13 +61,6 @@ export function GurbaniResponseCard({ feeling, response }: GurbaniResponseCardPr
             </p>
           </div>
         </CardContent>
-        <CardFooter>
-          <Link href="/rooh-check" className="w-full">
-            <Button variant="outline" className="w-full">
-              Share Another Feeling
-            </Button>
-          </Link>
-        </CardFooter>
       </Card>
     )
   }
@@ -135,9 +128,6 @@ export function GurbaniResponseCard({ feeling, response }: GurbaniResponseCardPr
         </Tabs>
       </CardContent>
       <CardFooter className="flex justify-between">
-        <Link href="/rooh-check">
-          <Button variant="outline">Share Another Feeling</Button>
-        </Link>
         <Link href="/spiritual-todo">
           <Button className="bg-orange-600 hover:bg-orange-700">View Spiritual To-Do</Button>
         </Link>

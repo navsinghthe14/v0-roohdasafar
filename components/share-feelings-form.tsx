@@ -2,94 +2,25 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { submitFeeling } from "@/app/actions"
-import { useToast } from "@/hooks/use-toast"
 import { AlertCircle, CheckCircle } from "lucide-react"
 import Link from "next/link"
 
-export function ShareFeelingsForm() {
-  const [feeling, setFeeling] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [apiKeyMissing, setApiKeyMissing] = useState(false)
-  const router = useRouter()
-  const { toast } = useToast()
+interface ShareFeelingsFormProps {
+  onSubmit: (feeling: string) => Promise<void>
+  isSubmitting: boolean
+  apiKeyMissing: boolean
+}
 
-  // Check if API key is configured
-  useEffect(() => {
-    const clientApiKey = localStorage.getItem("openai_api_key")
-    const isApiConfigured = !!clientApiKey || !!process.env.OPENAI_API_KEY
-    setApiKeyMissing(!isApiConfigured)
-  }, [])
+export function ShareFeelingsForm({ onSubmit, isSubmitting, apiKeyMissing }: ShareFeelingsFormProps) {
+  const [feeling, setFeeling] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!feeling.trim()) {
-      toast({
-        title: "Please share your feelings",
-        description: "We need to know how you're feeling to provide guidance.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsSubmitting(true)
-
-    try {
-      const result = await submitFeeling(feeling)
-
-      if (result.success) {
-        // Add Seva points on the client side
-        const currentPoints = localStorage.getItem("sevaPoints")
-          ? Number.parseInt(localStorage.getItem("sevaPoints") as string)
-          : 0
-        const newPoints = currentPoints + 5
-        localStorage.setItem("sevaPoints", newPoints.toString())
-
-        toast({
-          title: "Thank you for sharing",
-          description: apiKeyMissing
-            ? "Your response has been processed with a fallback guidance. Configure OpenAI API for personalized responses."
-            : "Your response has been processed successfully.",
-        })
-
-        // Redirect to the response page after a short delay
-        setTimeout(() => {
-          router.push("/gurbani-response")
-        }, 1500)
-      } else {
-        throw new Error("Failed to process your feelings")
-      }
-    } catch (error) {
-      console.error("Submit error:", error)
-
-      let errorMessage = "Please try again later."
-
-      if (error instanceof Error) {
-        if (error.message.includes("API key")) {
-          errorMessage = "Please check your OpenAI API key configuration."
-        } else if (error.message.includes("quota")) {
-          errorMessage = "OpenAI API quota exceeded. Please check your billing."
-        } else if (error.message.includes("network") || error.message.includes("fetch")) {
-          errorMessage = "Network error. Please check your internet connection."
-        } else {
-          errorMessage = error.message
-        }
-      }
-
-      toast({
-        title: "Something went wrong",
-        description: errorMessage,
-        variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
+    await onSubmit(feeling)
   }
 
   return (
