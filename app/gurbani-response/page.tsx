@@ -3,6 +3,8 @@ import { MobileNav } from "@/components/mobile-nav"
 import { SiteFooter } from "@/components/site-footer"
 import { GurbaniResponseCard } from "@/components/gurbani-response-card"
 import { getLastResponse } from "@/app/actions"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export default async function GurbaniResponsePage() {
   const lastSubmission = await getLastResponse()
@@ -31,9 +33,9 @@ export default async function GurbaniResponsePage() {
               <div className="text-center p-12 border rounded-lg bg-orange-50">
                 <p className="text-lg text-orange-900">Please share your feelings first to receive Gurbani guidance.</p>
                 <div className="mt-4">
-                  <a href="/rooh-check" className="text-orange-600 hover:text-orange-700 underline">
-                    Go to Rooh Check
-                  </a>
+                  <Link href="/rooh-check">
+                    <Button className="bg-orange-600 hover:bg-orange-700">Go to Rooh Check</Button>
+                  </Link>
                 </div>
               </div>
             )}

@@ -7,14 +7,11 @@ import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { BarChart, Calendar, Award, TrendingUp, CheckCircle2, BookOpen, Heart, HelpCircle } from "lucide-react"
 
-interface DashboardContentProps {
-  initialPoints: number
-}
-
-export function DashboardContent({ initialPoints }: DashboardContentProps) {
-  const [points, setPoints] = useState(initialPoints)
+export function DashboardContent() {
+  const [points, setPoints] = useState(0)
   const [weeklyGoal, setWeeklyGoal] = useState(100)
   const [progress, setProgress] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
 
   // Mock data for the dashboard
   const activityData = [
@@ -35,8 +32,49 @@ export function DashboardContent({ initialPoints }: DashboardContentProps) {
   ]
 
   useEffect(() => {
+    // Load Seva points from localStorage on client side
+    const loadSevaPoints = () => {
+      try {
+        const storedPoints = localStorage.getItem("sevaPoints")
+        const currentPoints = storedPoints ? Number.parseInt(storedPoints) : 0
+        setPoints(currentPoints)
+      } catch (error) {
+        console.error("Error loading Seva points:", error)
+        setPoints(0)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadSevaPoints()
+  }, [])
+
+  useEffect(() => {
     setProgress(Math.min((points / weeklyGoal) * 100, 100))
   }, [points, weeklyGoal])
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="border-orange-200">
+              <CardHeader className="pb-2">
+                <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-3 bg-gray-200 rounded animate-pulse mt-2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="text-center p-6">
+          <p className="text-gray-500">Loading your dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

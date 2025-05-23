@@ -45,6 +45,33 @@ export function GurbaniResponseCard({ feeling, response }: GurbaniResponseCardPr
     }
   }
 
+  // Check if we have a valid response
+  const hasValidResponse = response && response.gurbaniTuk && response.transliteration && response.translation
+
+  if (!hasValidResponse) {
+    return (
+      <Card className="border-orange-200 bg-orange-50">
+        <CardHeader>
+          <CardTitle className="text-orange-900">For your feeling: "{feeling}"</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center p-6">
+            <p className="text-lg text-orange-900">
+              We couldn't generate a proper response for your feeling. Please try again or check your API configuration.
+            </p>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Link href="/rooh-check" className="w-full">
+            <Button variant="outline" className="w-full">
+              Share Another Feeling
+            </Button>
+          </Link>
+        </CardFooter>
+      </Card>
+    )
+  }
+
   return (
     <Card className="border-orange-200 bg-orange-50">
       <CardHeader>

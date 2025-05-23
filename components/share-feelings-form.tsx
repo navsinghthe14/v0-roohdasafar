@@ -41,26 +41,30 @@ export function ShareFeelingsForm() {
     setIsSubmitting(true)
 
     try {
-      await submitFeeling(feeling)
+      const result = await submitFeeling(feeling)
 
-      // Add Seva points on the client side
-      const currentPoints = localStorage.getItem("sevaPoints")
-        ? Number.parseInt(localStorage.getItem("sevaPoints") as string)
-        : 0
-      const newPoints = currentPoints + 5
-      localStorage.setItem("sevaPoints", newPoints.toString())
+      if (result.success) {
+        // Add Seva points on the client side
+        const currentPoints = localStorage.getItem("sevaPoints")
+          ? Number.parseInt(localStorage.getItem("sevaPoints") as string)
+          : 0
+        const newPoints = currentPoints + 5
+        localStorage.setItem("sevaPoints", newPoints.toString())
 
-      toast({
-        title: "Thank you for sharing",
-        description: apiKeyMissing
-          ? "Your response has been processed with a fallback guidance. Configure OpenAI API for personalized responses."
-          : "Your response has been processed successfully.",
-      })
+        toast({
+          title: "Thank you for sharing",
+          description: apiKeyMissing
+            ? "Your response has been processed with a fallback guidance. Configure OpenAI API for personalized responses."
+            : "Your response has been processed successfully.",
+        })
 
-      // Redirect to the response page after a short delay
-      setTimeout(() => {
-        router.push("/gurbani-response")
-      }, 1500)
+        // Redirect to the response page after a short delay
+        setTimeout(() => {
+          router.push("/gurbani-response")
+        }, 1500)
+      } else {
+        throw new Error("Failed to process your feelings")
+      }
     } catch (error) {
       console.error("Submit error:", error)
 

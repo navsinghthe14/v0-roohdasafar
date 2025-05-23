@@ -2,11 +2,8 @@ import { MainNav } from "@/components/main-nav"
 import { MobileNav } from "@/components/mobile-nav"
 import { SiteFooter } from "@/components/site-footer"
 import { DashboardContent } from "@/components/dashboard-content"
-import { getSevaPoints } from "@/app/actions"
 
-export default async function DashboardPage() {
-  const { points } = await getSevaPoints()
-
+export default function DashboardPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -25,7 +22,7 @@ export default async function DashboardPage() {
               <p className="text-muted-foreground">Track your spiritual journey and progress</p>
             </div>
 
-            <DashboardContent initialPoints={points} />
+            <DashboardContent />
           </div>
         </div>
       </main>

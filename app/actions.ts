@@ -36,6 +36,8 @@ const spiritualTodos: { id: string; text: string; completed: boolean; createdAt:
 let cachedHukamnama: SikhNetHukamnama | null = null
 let cachedHukamnamaDate: string | null = null
 
+// Update the submitFeeling function to ensure proper response handling
+
 export async function submitFeeling(feeling: string) {
   try {
     // Store the feeling
@@ -70,10 +72,35 @@ export async function submitFeeling(feeling: string) {
     if (!envApiKey) {
       // If no environment API key, we'll need to use the client-side approach
       // For now, provide a fallback response
-      throw new Error(
-        "OpenAI API key is not configured in environment variables. Please configure it in your Vercel project settings.",
-      )
+      console.log("No API key found, using fallback response")
+
+      // Provide a fallback response when API is not configured
+      lastSubmission.response = {
+        gurbaniTuk: "ਸਰਬੱਤ ਦਾ ਭਲਾ ਕਰੇ ਵਾਹਿਗੁਰੂ",
+        transliteration: "Sarbat da bhala kare Waheguru",
+        translation: "May Waheguru bless all with prosperity and peace",
+        actions: [
+          "Take a few deep breaths and center yourself",
+          "Spend 10 minutes in quiet reflection or meditation",
+          "Practice gratitude by listing three things you're thankful for",
+        ],
+        ardaas:
+          "Waheguru, please grant me peace and clarity in this moment. Help me find strength in your teachings and wisdom in your guidance.",
+        explanation:
+          "This blessing reminds us that seeking the welfare of all beings brings inner peace and aligns us with divine will. (Note: This is a fallback response as the AI service is not configured.)",
+      }
+
+      // Still add the actions to the spiritual to-do list
+      for (const action of lastSubmission.response.actions) {
+        await addToSpiritualTodo(action)
+      }
+
+      revalidatePath("/gurbani-response")
+      revalidatePath("/spiritual-todo")
+      return { success: true }
     }
+
+    console.log("Using OpenAI API with key:", envApiKey ? "API key found" : "No API key")
 
     // Use the AI SDK directly on the server side
     const { openai } = await import("@ai-sdk/openai")
@@ -92,6 +119,8 @@ export async function submitFeeling(feeling: string) {
     if (!response.text) {
       throw new Error("Invalid response from OpenAI API")
     }
+
+    console.log("OpenAI response received:", response.text.substring(0, 100) + "...")
 
     // Try to parse the response, with fallback if parsing fails
     let parsedResponse: GurbaniResponse
@@ -134,13 +163,16 @@ export async function submitFeeling(feeling: string) {
       explanation: parsedResponse.explanation,
     }
 
+    console.log(
+      "Response stored in lastSubmission:",
+      lastSubmission.feeling,
+      lastSubmission.response.gurbaniTuk.substring(0, 50) + "...",
+    )
+
     // Automatically add the actions to the spiritual to-do list
     for (const action of parsedResponse.actions) {
       await addToSpiritualTodo(action)
     }
-
-    // Add Seva points for completing a Rooh Check
-    await addSevaPoints(5)
 
     revalidatePath("/gurbani-response")
     revalidatePath("/spiritual-todo")
@@ -170,9 +202,6 @@ export async function submitFeeling(feeling: string) {
       for (const action of lastSubmission.response.actions) {
         await addToSpiritualTodo(action)
       }
-
-      // Add Seva points for completing a Rooh Check
-      await addSevaPoints(5)
 
       revalidatePath("/gurbani-response")
       revalidatePath("/spiritual-todo")
@@ -230,7 +259,7 @@ export async function setReminder(action: string, time: string) {
   }
 }
 
-// Seva Points Management
+// Seva Points Management - These are now handled client-side only
 export async function addSevaPoints(points: number) {
   try {
     // In a real app, you would update this in a database
@@ -439,9 +468,7 @@ export async function getQuizQuestions() {
 
 export async function submitQuizResults(score: number) {
   try {
-    // Add Seva points based on score
-    await addSevaPoints(score * 3)
-
+    // Seva points will be handled on the client side
     return { success: true }
   } catch (error) {
     console.error("Error submitting quiz results:", error)
