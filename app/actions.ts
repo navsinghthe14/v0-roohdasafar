@@ -2,13 +2,19 @@
 
 import { revalidatePath } from "next/cache"
 import { fetchDailyHukamnama, fetchHukamnamaByDate, type SikhNetHukamnama } from "@/lib/sikhnet-service"
-
-// Import the new modules at the top
 import { selectPromptTemplate } from "@/lib/prompt-templates"
 import { processGurbaniResponse } from "@/lib/response-processor"
+import {
+  supabaseService,
+  type UserSubmission,
+  type SpiritualTodo,
+  type QuizResult,
+  type Feedback,
+  type Reminder,
+} from "@/lib/supabase-service"
+import { headers } from "next/headers"
 
-// This would connect to your database or external service in a real app
-// For now, we'll simulate storage with a simple in-memory object
+// In-memory storage for fallback (when not using auth)
 const lastSubmission = {
   feeling: "",
   response: {
@@ -21,32 +27,23 @@ const lastSubmission = {
   },
 }
 
-// Store for spiritual todos
-const spiritualTodos: { id: string; text: string; completed: boolean; createdAt: string }[] = []
-
 // Cache for the daily Hukamnama
 let cachedHukamnama: SikhNetHukamnama | null = null
 let cachedHukamnamaDate: string | null = null
 
-// Update the submitFeeling function to ensure proper response handling
-
-export async function submitFeeling(feeling: string) {
+export async function submitFeeling(feeling: string, userId?: string) {
   try {
-    // Store the feeling
+    const headersList = headers()
+    const userAgent = headersList.get("user-agent") || "Unknown"
+
     lastSubmission.feeling = feeling
 
-    // Use dynamic prompt selection based on feeling
     const prompt = selectPromptTemplate(feeling)
-
-    // Check if we have an OpenAI API key (either from environment or localStorage)
     const envApiKey = process.env.OPENAI_API_KEY
 
     if (!envApiKey) {
-      // If no environment API key, we'll need to use the client-side approach
-      // For now, provide a fallback response
       console.log("No API key found, using fallback response")
 
-      // Provide a fallback response when API is not configured
       lastSubmission.response = {
         gurbaniTuk: "ਸਰਬੱਤ ਦਾ ਭਲਾ ਕਰੇ ਵਾਹਿਗੁਰੂ",
         transliteration: "Sarbat da bhala kare Waheguru",
@@ -62,43 +59,56 @@ export async function submitFeeling(feeling: string) {
           "This blessing reminds us that seeking the welfare of all beings brings inner peace and aligns us with divine will. (Note: This is a fallback response as the AI service is not configured.)",
       }
 
-      // Still add the actions to the spiritual to-do list
-      for (const action of lastSubmission.response.actions) {
-        await addToSpiritualTodo(action)
+      // Store in Supabase
+      const submission: UserSubmission = {
+        user_id: userId,
+        feeling: feeling,
+        gurbani_tuk: lastSubmission.response.gurbaniTuk,
+        transliteration: lastSubmission.response.transliteration,
+        translation: lastSubmission.response.translation,
+        explanation: lastSubmission.response.explanation,
+        actions: lastSubmission.response.actions,
+        ardaas: lastSubmission.response.ardaas,
+        seva_points: 5,
+        user_agent: userAgent,
       }
 
-      revalidatePath("/gurbani-response")
+      await supabaseService.storeUserSubmission(submission)
+
+      // Add seva points if user is logged in
+      if (userId) {
+        await supabaseService.addSevaPoints(userId, 5)
+      }
+
+      for (const action of lastSubmission.response.actions) {
+        await addToSpiritualTodo(action, userId)
+      }
+
+      revalidatePath("/rooh-check")
       revalidatePath("/spiritual-todo")
       return { success: true }
     }
 
-    console.log("Using OpenAI API with key:", envApiKey ? "API key found" : "No API key")
+    console.log("Using OpenAI API")
 
-    // Use the AI SDK directly on the server side
     const { openai } = await import("@ai-sdk/openai")
     const { generateText } = await import("ai")
 
-    // You can also modify the temperature and other parameters
     const response = await generateText({
-      model: openai("gpt-4o", {
-        apiKey: envApiKey,
-      }),
+      model: openai("gpt-4o", { apiKey: envApiKey }),
       prompt: prompt,
-      temperature: 0.7, // Lower = more consistent, Higher = more creative
-      maxTokens: 1500, // Increase if you want longer responses
+      temperature: 0.7,
+      maxTokens: 1500,
     })
 
-    // Validate that we received a proper response
     if (!response.text) {
       throw new Error("Invalid response from OpenAI API")
     }
 
-    console.log("OpenAI response received:", response.text.substring(0, 100) + "...")
+    console.log("OpenAI response received")
 
-    // After getting the response from OpenAI, use the custom processor:
     const parsedResponse = processGurbaniResponse(response.text, feeling)
 
-    // Update the last submission with the processed response
     lastSubmission.response = {
       gurbaniTuk: parsedResponse.gurbaniTuk.gurmukhi,
       transliteration: parsedResponse.gurbaniTuk.transliteration,
@@ -108,26 +118,38 @@ export async function submitFeeling(feeling: string) {
       explanation: parsedResponse.explanation,
     }
 
-    console.log(
-      "Response stored in lastSubmission:",
-      lastSubmission.feeling,
-      lastSubmission.response.gurbaniTuk.substring(0, 50) + "...",
-    )
-
-    // Automatically add the actions to the spiritual to-do list
-    for (const action of parsedResponse.actions) {
-      await addToSpiritualTodo(action)
+    // Store in Supabase
+    const submission: UserSubmission = {
+      user_id: userId,
+      feeling: feeling,
+      gurbani_tuk: lastSubmission.response.gurbaniTuk,
+      transliteration: lastSubmission.response.transliteration,
+      translation: lastSubmission.response.translation,
+      explanation: lastSubmission.response.explanation,
+      actions: lastSubmission.response.actions,
+      ardaas: lastSubmission.response.ardaas,
+      seva_points: 5,
+      user_agent: userAgent,
     }
 
-    revalidatePath("/gurbani-response")
+    await supabaseService.storeUserSubmission(submission)
+
+    // Add seva points if user is logged in
+    if (userId) {
+      await supabaseService.addSevaPoints(userId, 5)
+    }
+
+    for (const action of parsedResponse.actions) {
+      await addToSpiritualTodo(action, userId)
+    }
+
+    revalidatePath("/rooh-check")
     revalidatePath("/spiritual-todo")
     return { success: true }
   } catch (error) {
     console.error("Error submitting feeling:", error)
 
-    // If there's an API error, provide a meaningful fallback response
     if (error instanceof Error && (error.message.includes("API key") || error.message.includes("not configured"))) {
-      // Provide a fallback response when API is not configured
       lastSubmission.response = {
         gurbaniTuk: "ਸਰਬੱਤ ਦਾ ਭਲਾ ਕਰੇ ਵਾਹਿਗੁਰੂ",
         transliteration: "Sarbat da bhala kare Waheguru",
@@ -143,12 +165,32 @@ export async function submitFeeling(feeling: string) {
           "This blessing reminds us that seeking the welfare of all beings brings inner peace and aligns us with divine will. (Note: This is a fallback response as the AI service is not configured.)",
       }
 
-      // Still add the actions to the spiritual to-do list
-      for (const action of lastSubmission.response.actions) {
-        await addToSpiritualTodo(action)
+      // Store fallback response in Supabase
+      const submission: UserSubmission = {
+        user_id: userId,
+        feeling: feeling,
+        gurbani_tuk: lastSubmission.response.gurbaniTuk,
+        transliteration: lastSubmission.response.transliteration,
+        translation: lastSubmission.response.translation,
+        explanation: lastSubmission.response.explanation,
+        actions: lastSubmission.response.actions,
+        ardaas: lastSubmission.response.ardaas,
+        seva_points: 5,
+        user_agent: "fallback",
       }
 
-      revalidatePath("/gurbani-response")
+      await supabaseService.storeUserSubmission(submission)
+
+      // Add seva points if user is logged in
+      if (userId) {
+        await supabaseService.addSevaPoints(userId, 5)
+      }
+
+      for (const action of lastSubmission.response.actions) {
+        await addToSpiritualTodo(action, userId)
+      }
+
+      revalidatePath("/rooh-check")
       revalidatePath("/spiritual-todo")
       return { success: true }
     }
@@ -157,25 +199,44 @@ export async function submitFeeling(feeling: string) {
   }
 }
 
-export async function getLastResponse() {
-  // In a real app, you would fetch this from a database
-  return lastSubmission
-}
-
-export async function addToSpiritualTodo(action: string) {
+export async function getLastResponse(userId?: string) {
   try {
-    // In a real app, you would add this to a database
-    const newTodo = {
-      id: Date.now().toString(),
-      text: action,
-      completed: false,
-      createdAt: new Date().toISOString(),
+    // Try to get from Supabase first
+    const lastDbSubmission = await supabaseService.getLastSubmission(userId)
+
+    if (lastDbSubmission) {
+      return {
+        feeling: lastDbSubmission.feeling,
+        response: {
+          gurbaniTuk: lastDbSubmission.gurbani_tuk,
+          transliteration: lastDbSubmission.transliteration,
+          translation: lastDbSubmission.translation,
+          actions: lastDbSubmission.actions,
+          ardaas: lastDbSubmission.ardaas,
+          explanation: lastDbSubmission.explanation,
+        },
+      }
     }
 
-    // Add to our in-memory store
-    spiritualTodos.push(newTodo)
+    // Fallback to in-memory
+    return lastSubmission
+  } catch (error) {
+    console.error("Error getting last response:", error)
+    return lastSubmission
+  }
+}
 
-    // For localStorage persistence, we'll handle this in the client component
+export async function addToSpiritualTodo(action: string, userId?: string) {
+  try {
+    // Store in Supabase
+    const todo: SpiritualTodo = {
+      user_id: userId,
+      text: action,
+      completed: false,
+      source: "rooh-check",
+    }
+
+    await supabaseService.storeSpiritualTodo(todo)
 
     revalidatePath("/spiritual-todo")
     return { success: true }
@@ -185,16 +246,36 @@ export async function addToSpiritualTodo(action: string) {
   }
 }
 
-export async function getSpiritualTodos() {
-  // In a real app, you would fetch this from a database
-  return spiritualTodos
+export async function getSpiritualTodos(userId?: string) {
+  try {
+    const todos = await supabaseService.getSpiritualTodos(userId)
+
+    // Convert to the format expected by the UI
+    return todos.map((todo) => ({
+      id: todo.id!,
+      text: todo.text,
+      completed: todo.completed,
+      createdAt: todo.created_at!,
+    }))
+  } catch (error) {
+    console.error("Error getting spiritual todos:", error)
+    return []
+  }
 }
 
-export async function setReminder(action: string, time: string) {
+export async function setReminder(action: string, time: string, userId?: string) {
   try {
-    // In a real app, you would store this in a database and set up a notification
-    // For now, we'll just log it
     console.log("Set reminder:", action, "at", time)
+
+    // Store in Supabase
+    const reminder: Reminder = {
+      user_id: userId,
+      action: action,
+      time: time,
+      days: ["everyday"],
+    }
+
+    await supabaseService.storeReminder(reminder)
 
     revalidatePath("/reminders")
     return { success: true }
@@ -204,12 +285,11 @@ export async function setReminder(action: string, time: string) {
   }
 }
 
-// Seva Points Management - These are now handled client-side only
-export async function addSevaPoints(points: number) {
+export async function addSevaPoints(points: number, userId?: string) {
   try {
-    // In a real app, you would update this in a database
-    // For server actions, we can't access localStorage directly
-    // This will be handled on the client side
+    if (userId) {
+      await supabaseService.addSevaPoints(userId, points)
+    }
     return { success: true, points: points }
   } catch (error) {
     console.error("Error adding Seva points:", error)
@@ -217,10 +297,12 @@ export async function addSevaPoints(points: number) {
   }
 }
 
-export async function getSevaPoints() {
+export async function getSevaPoints(userId?: string) {
   try {
-    // In a real app, you would fetch this from a database
-    // For now, return a default value since we can't access localStorage on server
+    if (userId) {
+      const profile = await supabaseService.getUserProfile(userId)
+      return { points: profile?.total_seva_points || 0 }
+    }
     return { points: 0 }
   } catch (error) {
     console.error("Error getting Seva points:", error)
@@ -228,9 +310,13 @@ export async function getSevaPoints() {
   }
 }
 
-export async function resetSevaPoints() {
+export async function resetSevaPoints(userId?: string) {
   try {
-    // In a real app, you would update this in a database
+    if (userId) {
+      await supabaseService.updateUserProfile(userId, {
+        weekly_seva_points: 0,
+      })
+    }
     return { success: true }
   } catch (error) {
     console.error("Error resetting Seva points:", error)
@@ -238,18 +324,16 @@ export async function resetSevaPoints() {
   }
 }
 
-// Hukamnama
 export async function getDailyHukamnama() {
   try {
-    const today = new Date().toISOString().split("T")[0] // YYYY-MM-DD format
+    const today = new Date().toISOString().split("T")[0]
 
-    // Check if we have a cached Hukamnama for today
     if (cachedHukamnama && cachedHukamnamaDate === today) {
       return {
         date: cachedHukamnama.date,
         hukamnama: {
           gurmukhi: cachedHukamnama.gurmukhi,
-          transliteration: cachedHukamnama.punjabi, // Using Punjabi as transliteration
+          transliteration: cachedHukamnama.punjabi,
           translation: cachedHukamnama.english,
           explanation: "This is today's Hukamnama from Sri Harmandir Sahib, Amritsar.",
           actions: [
@@ -266,19 +350,15 @@ export async function getDailyHukamnama() {
       }
     }
 
-    // Fetch fresh Hukamnama from SikhNet
     const sikhnetHukamnama = await fetchDailyHukamnama()
-
-    // Cache the result
     cachedHukamnama = sikhnetHukamnama
     cachedHukamnamaDate = today
 
-    // Return formatted Hukamnama
     return {
       date: sikhnetHukamnama.date,
       hukamnama: {
         gurmukhi: sikhnetHukamnama.gurmukhi,
-        transliteration: sikhnetHukamnama.punjabi, // Using Punjabi as transliteration
+        transliteration: sikhnetHukamnama.punjabi,
         translation: sikhnetHukamnama.english,
         explanation: "This is today's Hukamnama from Sri Harmandir Sahib, Amritsar.",
         actions: [
@@ -296,7 +376,6 @@ export async function getDailyHukamnama() {
   } catch (error) {
     console.error("Error getting daily Hukamnama:", error)
 
-    // Fallback to static Hukamnama if API fails
     return {
       date: new Date().toLocaleDateString(),
       hukamnama: {
@@ -327,10 +406,8 @@ export async function getDailyHukamnama() {
 
 export async function getHukamnamaByDate(year: string, month: string, day: string) {
   try {
-    // Fetch Hukamnama from SikhNet archives
     const sikhnetHukamnama = await fetchHukamnamaByDate(year, month, day)
 
-    // Return formatted Hukamnama
     return {
       date: sikhnetHukamnama.date,
       hukamnama: {
@@ -356,11 +433,18 @@ export async function getHukamnamaByDate(year: string, month: string, day: strin
   }
 }
 
-// Feedback
-export async function submitFeedback(feedback: string) {
+export async function submitFeedback(feedback: string, feedbackType = "general", userId?: string) {
   try {
-    // In a real app, you would store this in a database
     console.log("Feedback submitted:", feedback)
+
+    // Store in Supabase
+    const feedbackData: Feedback = {
+      user_id: userId,
+      feedback_type: feedbackType,
+      content: feedback,
+    }
+
+    await supabaseService.storeFeedback(feedbackData)
 
     return { success: true }
   } catch (error) {
@@ -369,10 +453,8 @@ export async function submitFeedback(feedback: string) {
   }
 }
 
-// Quiz
 export async function getQuizQuestions() {
   try {
-    // In a real app, you would fetch this from a database
     return [
       {
         id: "1",
@@ -411,9 +493,23 @@ export async function getQuizQuestions() {
   }
 }
 
-export async function submitQuizResults(score: number) {
+export async function submitQuizResults(score: number, userId?: string) {
   try {
-    // Seva points will be handled on the client side
+    // Store in Supabase
+    const result: QuizResult = {
+      user_id: userId,
+      score: score,
+      total_questions: 5,
+      seva_points: score * 3,
+    }
+
+    await supabaseService.storeQuizResult(result)
+
+    // Add seva points if user is logged in
+    if (userId) {
+      await supabaseService.addSevaPoints(userId, score * 3)
+    }
+
     return { success: true }
   } catch (error) {
     console.error("Error submitting quiz results:", error)
