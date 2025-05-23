@@ -21,9 +21,11 @@ export default async function RoohCheckPage() {
           <div className="mx-auto max-w-2xl space-y-6">
             <div className="space-y-2 text-center">
               <h1 className="text-3xl font-bold tracking-tight text-orange-900">
-                <span className="text-orange-600">ਰੂਹ ਚੈੱਕ</span> - Rooh Check
+                <span className="text-orange-600">ਰੂਹ ਚੈੱਕ</span> - Rooh Check & Guidance
               </h1>
-              <p className="text-muted-foreground">Express what's in your heart and receive Gurbani guidance</p>
+              <p className="text-muted-foreground">
+                Express what's in your heart and receive personalized Gurbani guidance
+              </p>
             </div>
             <RoohCheckWithResponse initialSubmission={lastSubmission} />
           </div>

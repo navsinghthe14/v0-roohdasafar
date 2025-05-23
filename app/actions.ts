@@ -3,17 +3,9 @@
 import { revalidatePath } from "next/cache"
 import { fetchDailyHukamnama, fetchHukamnamaByDate, type SikhNetHukamnama } from "@/lib/sikhnet-service"
 
-// Type for the OpenAI response
-interface GurbaniResponse {
-  gurbaniTuk: {
-    gurmukhi: string
-    transliteration: string
-    translation: string
-  }
-  actions: string[]
-  ardaas: string
-  explanation: string
-}
+// Import the new modules at the top
+import { selectPromptTemplate } from "@/lib/prompt-templates"
+import { processGurbaniResponse } from "@/lib/response-processor"
 
 // This would connect to your database or external service in a real app
 // For now, we'll simulate storage with a simple in-memory object
@@ -43,28 +35,8 @@ export async function submitFeeling(feeling: string) {
     // Store the feeling
     lastSubmission.feeling = feeling
 
-    // Create the prompt for OpenAI
-    const prompt = `
-      As a Sikh spiritual guide, provide guidance for someone who is feeling: "${feeling}".
-      
-      Respond with a JSON object in the following format:
-      {
-        "gurbaniTuk": {
-          "gurmukhi": "Gurbani verse in Gurmukhi script",
-          "transliteration": "Transliteration of the verse",
-          "translation": "English translation of the verse"
-        },
-        "actions": [
-          "First actionable step based on Sikh teachings",
-          "Second actionable step based on Sikh teachings",
-          "Third actionable step based on Sikh teachings"
-        ],
-        "ardaas": "A suggested prayer (Ardaas) related to their feeling",
-        "explanation": "Brief explanation of how this Gurbani relates to their feeling"
-      }
-      
-      Ensure the Gurbani tuk is relevant to their emotional state. The actions should be practical and rooted in Sikh teachings. The Ardaas should be compassionate and supportive.
-    `
+    // Use dynamic prompt selection based on feeling
+    const prompt = selectPromptTemplate(feeling)
 
     // Check if we have an OpenAI API key (either from environment or localStorage)
     const envApiKey = process.env.OPENAI_API_KEY
@@ -106,13 +78,14 @@ export async function submitFeeling(feeling: string) {
     const { openai } = await import("@ai-sdk/openai")
     const { generateText } = await import("ai")
 
+    // You can also modify the temperature and other parameters
     const response = await generateText({
       model: openai("gpt-4o", {
         apiKey: envApiKey,
       }),
       prompt: prompt,
-      temperature: 0.7,
-      maxTokens: 1000,
+      temperature: 0.7, // Lower = more consistent, Higher = more creative
+      maxTokens: 1500, // Increase if you want longer responses
     })
 
     // Validate that we received a proper response
@@ -122,38 +95,10 @@ export async function submitFeeling(feeling: string) {
 
     console.log("OpenAI response received:", response.text.substring(0, 100) + "...")
 
-    // Try to parse the response, with fallback if parsing fails
-    let parsedResponse: GurbaniResponse
-    try {
-      parsedResponse = JSON.parse(response.text)
-    } catch (parseError) {
-      console.error("Failed to parse OpenAI response:", response.text)
+    // After getting the response from OpenAI, use the custom processor:
+    const parsedResponse = processGurbaniResponse(response.text, feeling)
 
-      // Fallback response if parsing fails
-      parsedResponse = {
-        gurbaniTuk: {
-          gurmukhi: "ਸਰਬੱਤ ਦਾ ਭਲਾ ਕਰੇ ਵਾਹਿਗੁਰੂ",
-          transliteration: "Sarbat da bhala kare Waheguru",
-          translation: "May Waheguru bless all with prosperity and peace",
-        },
-        actions: [
-          "Take a few deep breaths and center yourself",
-          "Spend 10 minutes in quiet reflection or meditation",
-          "Practice gratitude by listing three things you're thankful for",
-        ],
-        ardaas:
-          "Waheguru, please grant me peace and clarity in this moment. Help me find strength in your teachings and wisdom in your guidance.",
-        explanation:
-          "This blessing reminds us that seeking the welfare of all beings brings inner peace and aligns us with divine will.",
-      }
-    }
-
-    // Validate the parsed response structure
-    if (!parsedResponse.gurbaniTuk || !parsedResponse.actions || !parsedResponse.ardaas) {
-      throw new Error("Incomplete response from AI service")
-    }
-
-    // Update the last submission with the API response
+    // Update the last submission with the processed response
     lastSubmission.response = {
       gurbaniTuk: parsedResponse.gurbaniTuk.gurmukhi,
       transliteration: parsedResponse.gurbaniTuk.transliteration,

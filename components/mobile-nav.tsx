@@ -34,13 +34,6 @@ export function MobileNav() {
           <Link href="/rooh-check" className="hover:text-amber-900 transition-colors" onClick={() => setOpen(false)}>
             Rooh Check
           </Link>
-          <Link
-            href="/gurbani-response"
-            className="hover:text-amber-900 transition-colors"
-            onClick={() => setOpen(false)}
-          >
-            Gurbani Response
-          </Link>
           <Link href="/hukamnama" className="hover:text-amber-900 transition-colors" onClick={() => setOpen(false)}>
             Hukamnama
           </Link>

@@ -16,12 +16,6 @@ export function MainNav({ className, ...props }: React.HTMLAttributes<HTMLElemen
         Rooh Check
       </Link>
       <Link
-        href="/gurbani-response"
-        className="text-sm font-medium text-muted-foreground transition-colors hover:text-amber-900"
-      >
-        Gurbani Response
-      </Link>
-      <Link
         href="/hukamnama"
         className="text-sm font-medium text-muted-foreground transition-colors hover:text-amber-900"
       >
