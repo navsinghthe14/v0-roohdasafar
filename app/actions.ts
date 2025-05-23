@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache"
 import { fetchDailyHukamnama, fetchHukamnamaByDate, type SikhNetHukamnama } from "@/lib/sikhnet-service"
-import { config } from "@/lib/config"
 
 // Type for the OpenAI response
 interface GurbaniResponse {
@@ -65,39 +64,41 @@ export async function submitFeeling(feeling: string) {
       Ensure the Gurbani tuk is relevant to their emotional state. The actions should be practical and rooted in Sikh teachings. The Ardaas should be compassionate and supportive.
     `
 
-    // Check if we have a valid app URL
-    if (!config.app.url) {
-      throw new Error("App URL is not configured. Please set NEXT_PUBLIC_APP_URL environment variable.")
+    // Check if we have an OpenAI API key (either from environment or localStorage)
+    const envApiKey = process.env.OPENAI_API_KEY
+
+    if (!envApiKey) {
+      // If no environment API key, we'll need to use the client-side approach
+      // For now, provide a fallback response
+      throw new Error(
+        "OpenAI API key is not configured in environment variables. Please configure it in your Vercel project settings.",
+      )
     }
 
-    // Call our API route using the configured app URL
-    const response = await fetch(`${config.app.url}/api/openai`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ prompt }),
+    // Use the AI SDK directly on the server side
+    const { openai } = await import("@ai-sdk/openai")
+    const { generateText } = await import("ai")
+
+    const response = await generateText({
+      model: openai("gpt-4o", {
+        apiKey: envApiKey,
+      }),
+      prompt: prompt,
+      temperature: 0.7,
+      maxTokens: 1000,
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("API Response Error:", errorText)
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`)
-    }
-
-    const data = await response.json()
-
     // Validate that we received a proper response
-    if (!data.text) {
+    if (!response.text) {
       throw new Error("Invalid response from OpenAI API")
     }
 
     // Try to parse the response, with fallback if parsing fails
     let parsedResponse: GurbaniResponse
     try {
-      parsedResponse = JSON.parse(data.text)
+      parsedResponse = JSON.parse(response.text)
     } catch (parseError) {
-      console.error("Failed to parse OpenAI response:", data.text)
+      console.error("Failed to parse OpenAI response:", response.text)
 
       // Fallback response if parsing fails
       parsedResponse = {
@@ -146,6 +147,38 @@ export async function submitFeeling(feeling: string) {
     return { success: true }
   } catch (error) {
     console.error("Error submitting feeling:", error)
+
+    // If there's an API error, provide a meaningful fallback response
+    if (error instanceof Error && (error.message.includes("API key") || error.message.includes("not configured"))) {
+      // Provide a fallback response when API is not configured
+      lastSubmission.response = {
+        gurbaniTuk: "ਸਰਬੱਤ ਦਾ ਭਲਾ ਕਰੇ ਵਾਹਿਗੁਰੂ",
+        transliteration: "Sarbat da bhala kare Waheguru",
+        translation: "May Waheguru bless all with prosperity and peace",
+        actions: [
+          "Take a few deep breaths and center yourself",
+          "Spend 10 minutes in quiet reflection or meditation",
+          "Practice gratitude by listing three things you're thankful for",
+        ],
+        ardaas:
+          "Waheguru, please grant me peace and clarity in this moment. Help me find strength in your teachings and wisdom in your guidance.",
+        explanation:
+          "This blessing reminds us that seeking the welfare of all beings brings inner peace and aligns us with divine will. (Note: This is a fallback response as the AI service is not configured.)",
+      }
+
+      // Still add the actions to the spiritual to-do list
+      for (const action of lastSubmission.response.actions) {
+        await addToSpiritualTodo(action)
+      }
+
+      // Add Seva points for completing a Rooh Check
+      await addSevaPoints(5)
+
+      revalidatePath("/gurbani-response")
+      revalidatePath("/spiritual-todo")
+      return { success: true }
+    }
+
     throw new Error(error instanceof Error ? error.message : "Failed to submit feeling")
   }
 }
@@ -201,14 +234,9 @@ export async function setReminder(action: string, time: string) {
 export async function addSevaPoints(points: number) {
   try {
     // In a real app, you would update this in a database
-    const currentPoints = localStorage.getItem("sevaPoints")
-      ? Number.parseInt(localStorage.getItem("sevaPoints") as string)
-      : 0
-
-    const newPoints = currentPoints + points
-    localStorage.setItem("sevaPoints", newPoints.toString())
-
-    return { success: true, points: newPoints }
+    // For server actions, we can't access localStorage directly
+    // This will be handled on the client side
+    return { success: true, points: points }
   } catch (error) {
     console.error("Error adding Seva points:", error)
     throw new Error("Failed to add Seva points")
@@ -218,11 +246,8 @@ export async function addSevaPoints(points: number) {
 export async function getSevaPoints() {
   try {
     // In a real app, you would fetch this from a database
-    const points = localStorage.getItem("sevaPoints")
-      ? Number.parseInt(localStorage.getItem("sevaPoints") as string)
-      : 0
-
-    return { points }
+    // For now, return a default value since we can't access localStorage on server
+    return { points: 0 }
   } catch (error) {
     console.error("Error getting Seva points:", error)
     throw new Error("Failed to get Seva points")
@@ -232,8 +257,6 @@ export async function getSevaPoints() {
 export async function resetSevaPoints() {
   try {
     // In a real app, you would update this in a database
-    localStorage.setItem("sevaPoints", "0")
-
     return { success: true }
   } catch (error) {
     console.error("Error resetting Seva points:", error)
