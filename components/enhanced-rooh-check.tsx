@@ -51,16 +51,20 @@ export function EnhancedRoohCheck({ initialSubmission }: EnhancedRoohCheckProps)
   const { toast } = useToast()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Suggested feelings for quick selection
+  // Enhanced suggested feelings with emojis and better categorization
   const suggestedFeelings = [
-    "I feel anxious about my future",
-    "I'm grateful for my blessings",
-    "I feel lost and need direction",
-    "I'm struggling with anger",
-    "I feel peaceful after meditation",
-    "I'm worried about my family",
-    "I feel disconnected from Waheguru",
-    "I'm happy and want to share joy",
+    "😰 I feel anxious about my future",
+    "🙏 I'm grateful for my family's health",
+    "😔 I feel lost and need spiritual direction",
+    "😤 I'm struggling with anger and frustration",
+    "🧘‍♀️ I feel peaceful after meditation",
+    "😟 I'm worried about my loved ones",
+    "💔 I feel disconnected from Waheguru",
+    "😊 I'm happy and want to share this joy",
+    "😢 I'm going through a difficult time",
+    "✨ I want to grow spiritually",
+    "🤲 I need strength to face challenges",
+    "💝 I feel blessed and want to give back",
   ]
 
   useEffect(() => {
@@ -114,10 +118,10 @@ export function EnhancedRoohCheck({ initialSubmission }: EnhancedRoohCheckProps)
         }, 500)
 
         toast({
-          title: "🙏 Guidance received",
+          title: "🙏 Gurbani guidance received",
           description: apiKeyMissing
             ? "Fallback guidance provided. Configure OpenAI for personalized responses."
-            : "Your personalized Gurbani guidance is ready.",
+            : "Your personalized Gurbani guidance from Guru Granth Sahib Ji is ready.",
         })
         vibrate([50, 100, 50])
       } else {
@@ -151,7 +155,9 @@ export function EnhancedRoohCheck({ initialSubmission }: EnhancedRoohCheckProps)
   }
 
   const handleQuickFeeling = (selectedFeeling: string) => {
-    setFeeling(selectedFeeling)
+    // Remove emoji from the feeling text
+    const cleanFeeling = selectedFeeling.replace(/^[^\w\s]+\s/, "")
+    setFeeling(cleanFeeling)
     if (textareaRef.current) {
       textareaRef.current.focus()
     }
@@ -198,12 +204,12 @@ export function EnhancedRoohCheck({ initialSubmission }: EnhancedRoohCheckProps)
                   <div className="text-4xl sm:text-6xl mb-2">🙏</div>
                   <h2 className="text-xl sm:text-2xl font-bold text-orange-900">Welcome to Rooh Check</h2>
                   <p className="text-sm sm:text-base text-gray-700 max-w-md mx-auto leading-relaxed">
-                    Share what's in your heart and receive personalized guidance from Gurbani. Your feelings matter, and
-                    Sikh teachings offer wisdom for every emotional state.
+                    Share what's in your heart and receive authentic guidance from <strong>Guru Granth Sahib Ji</strong>
+                    . Your feelings matter, and Gurbani offers wisdom for every emotional state.
                   </p>
                   <Badge className="bg-orange-100 text-orange-800 text-xs sm:text-sm">
                     <Sparkles className="h-3 w-3 mr-1" />
-                    Earn 5 Seva points for each check-in
+                    Authentic Gurbani • Earn 5 Seva points
                   </Badge>
                 </div>
               </CardContent>
@@ -215,7 +221,7 @@ export function EnhancedRoohCheck({ initialSubmission }: EnhancedRoohCheckProps)
             <CardHeader className="pb-3 sm:pb-4">
               <CardTitle className="flex items-center gap-2 text-lg sm:text-xl text-orange-900">
                 <Heart className="h-5 w-5 text-orange-600" />
-                How is your rooh (soul) feeling?
+                How is your rooh (soul) feeling today?
               </CardTitle>
             </CardHeader>
 
@@ -225,9 +231,10 @@ export function EnhancedRoohCheck({ initialSubmission }: EnhancedRoohCheckProps)
                 <div className="p-3 bg-amber-50 text-amber-700 rounded-lg flex items-start gap-2 text-sm">
                   <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <div className="space-y-2">
-                    <p className="font-medium">API Key Not Configured</p>
+                    <p className="font-medium">Limited AI Features</p>
                     <p className="text-xs">
-                      You'll receive fallback guidance. For personalized responses, configure your OpenAI API key.
+                      You'll receive authentic Gurbani guidance. For AI-enhanced personalization, configure your OpenAI
+                      API key.
                     </p>
                     <Link href="/settings/api-settings">
                       <Button size="sm" variant="outline" className="text-orange-600 border-orange-600 h-7 text-xs">
@@ -240,17 +247,17 @@ export function EnhancedRoohCheck({ initialSubmission }: EnhancedRoohCheckProps)
                 <div className="p-3 bg-green-50 text-green-700 rounded-lg flex items-start gap-2 text-sm">
                   <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-medium">AI-Powered Guidance Ready</p>
-                    <p className="text-xs">Your OpenAI API is configured for personalized responses.</p>
+                    <p className="font-medium">🤖 AI-Enhanced Gurbani Guidance Ready</p>
+                    <p className="text-xs">Personalized responses from Guru Granth Sahib Ji with AI assistance.</p>
                   </div>
                 </div>
               )}
 
-              {/* Quick Feeling Suggestions */}
+              {/* Quick Feeling Suggestions with Emojis */}
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">Quick suggestions:</p>
+                <p className="text-sm font-medium text-gray-700">💭 Quick suggestions:</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {suggestedFeelings.slice(0, 4).map((suggestion, index) => (
+                  {suggestedFeelings.slice(0, 6).map((suggestion, index) => (
                     <Button
                       key={index}
                       variant="outline"
@@ -271,17 +278,17 @@ export function EnhancedRoohCheck({ initialSubmission }: EnhancedRoohCheckProps)
                   placeholder="Share what's in your heart...
 
 Examples:
-• I feel anxious about my future
-• I'm grateful for my family's health  
-• I feel lost and need direction
-• I'm struggling with anger
-• I feel peaceful after meditation"
+😰 I feel anxious about my future
+🙏 I'm grateful for my family's health  
+😔 I feel lost and need direction
+😤 I'm struggling with anger
+🧘‍♀️ I feel peaceful after meditation"
                   className="min-h-[120px] sm:min-h-[150px] resize-none bg-white border-orange-200 focus:border-orange-400 text-sm sm:text-base"
                   value={feeling}
                   onChange={(e) => setFeeling(e.target.value)}
                 />
                 <p className="text-xs text-gray-500">
-                  Express yourself freely. There's no judgment here, only compassion and guidance.
+                  Express yourself freely. You'll receive authentic guidance from <strong>Guru Granth Sahib Ji</strong>.
                 </p>
               </div>
             </CardContent>
@@ -303,7 +310,7 @@ Examples:
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Getting Guidance...
+                    Getting Gurbani Guidance...
                   </>
                 ) : (
                   <>
@@ -324,9 +331,9 @@ Examples:
             <Loader2 className="h-8 w-8 sm:h-10 sm:w-10 animate-spin text-orange-600 mx-auto" />
             <div className="space-y-2">
               <p className="text-lg sm:text-xl font-medium text-orange-900">
-                Generating your personalized Gurbani guidance...
+                🙏 Seeking guidance from Guru Granth Sahib Ji...
               </p>
-              <p className="text-sm text-gray-500">This may take a few moments</p>
+              <p className="text-sm text-gray-500">Finding the perfect Gurbani verse for your heart</p>
             </div>
             <ArrowDown className="h-5 w-5 text-orange-400 animate-bounce mx-auto" />
           </div>
@@ -337,9 +344,9 @@ Examples:
       {hasResponse && currentSubmission.feeling && !isSubmitting && (
         <div id="gurbani-response" className="space-y-4 sm:space-y-6">
           <div className="text-center space-y-2">
-            <h2 className="text-xl sm:text-2xl font-bold text-orange-900">Your Gurbani Guidance</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-orange-900">📿 Your Gurbani Guidance</h2>
             <p className="text-sm sm:text-base text-gray-600">
-              Based on "{currentSubmission.feeling}", here's wisdom from Sikh teachings
+              Based on "{currentSubmission.feeling}", here's wisdom from <strong>Guru Granth Sahib Ji</strong>
             </p>
           </div>
 
@@ -347,7 +354,7 @@ Examples:
             <CardHeader className="pb-3 sm:pb-4">
               <CardTitle className="text-orange-900 flex items-center gap-2 text-lg sm:text-xl">
                 <BookOpen className="h-5 w-5" />
-                <span className="truncate">Guidance for your feeling</span>
+                <span className="truncate">Divine Guidance</span>
               </CardTitle>
             </CardHeader>
 
@@ -359,28 +366,28 @@ Examples:
                     className="flex flex-col sm:flex-row items-center gap-1 p-2 sm:p-3 text-xs sm:text-sm"
                   >
                     <BookOpen className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span>Gurbani</span>
+                    <span>📿 Gurbani</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="explanation"
                     className="flex flex-col sm:flex-row items-center gap-1 p-2 sm:p-3 text-xs sm:text-sm"
                   >
                     <Lightbulb className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span>Meaning</span>
+                    <span>💡 Meaning</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="actions"
                     className="flex flex-col sm:flex-row items-center gap-1 p-2 sm:p-3 text-xs sm:text-sm"
                   >
                     <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span>Actions</span>
+                    <span>✨ Actions</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="ardaas"
                     className="flex flex-col sm:flex-row items-center gap-1 p-2 sm:p-3 text-xs sm:text-sm"
                   >
                     <Hands className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span>Prayer</span>
+                    <span>🤲 Prayer</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -401,8 +408,7 @@ Examples:
                     </div>
                     <div className="text-center">
                       <Badge className="bg-orange-100 text-orange-800 text-xs sm:text-sm">
-                        <MessageSquare className="h-3 w-3 mr-1" />
-                        Wisdom from Guru Granth Sahib
+                        <MessageSquare className="h-3 w-3 mr-1" />📖 From Guru Granth Sahib Ji
                       </Badge>
                     </div>
                   </div>
@@ -414,7 +420,7 @@ Examples:
                       <Lightbulb className="h-5 w-5 text-orange-600 mt-1 flex-shrink-0" />
                       <div>
                         <h3 className="font-medium text-orange-900 mb-2 text-sm sm:text-base">
-                          How this relates to your feeling:
+                          💡 How this Gurbani relates to your feeling:
                         </h3>
                         <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
                           {currentSubmission.response.explanation}
@@ -427,8 +433,7 @@ Examples:
                 <TabsContent value="actions" className="p-4 sm:p-6 bg-white rounded-lg mt-4 shadow-sm">
                   <div className="space-y-4">
                     <h3 className="font-medium text-orange-900 flex items-center gap-2 text-sm sm:text-base">
-                      <PlusCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-                      Spiritual Actions to Take:
+                      <PlusCircle className="h-4 w-4 sm:h-5 sm:w-5" />✨ Spiritual Actions to Take:
                     </h3>
                     <div className="space-y-3">
                       {currentSubmission.response.actions.map((action, index) => (
@@ -472,7 +477,7 @@ Examples:
                       <Hands className="h-5 w-5 text-orange-600 mt-1 flex-shrink-0" />
                       <div className="flex-1">
                         <h3 className="font-medium text-orange-900 mb-3 text-sm sm:text-base">
-                          Suggested Prayer (Ardaas):
+                          🤲 Suggested Prayer (Ardaas):
                         </h3>
                         <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-400">
                           <p className="text-sm sm:text-base text-gray-800 leading-relaxed italic">
@@ -484,7 +489,7 @@ Examples:
                     <div className="text-center pt-4">
                       <Link href="/ardaas">
                         <Button className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto">
-                          Go to Ardaas Page
+                          🙏 Go to Ardaas Page
                         </Button>
                       </Link>
                     </div>
@@ -496,7 +501,7 @@ Examples:
             <CardFooter className="flex flex-col sm:flex-row justify-between gap-3 pt-4">
               <Link href="/spiritual-todo" className="w-full sm:w-auto">
                 <Button variant="outline" className="w-full border-orange-300 text-orange-600 hover:bg-orange-50">
-                  View Spiritual To-Do
+                  📋 View Spiritual To-Do
                 </Button>
               </Link>
               <div className="flex items-center justify-center sm:justify-end gap-2">
@@ -515,7 +520,7 @@ Examples:
               variant="outline"
               className="border-orange-300 text-orange-600 hover:bg-orange-50"
             >
-              Share Another Feeling
+              💭 Share Another Feeling
             </Button>
           </div>
         </div>
