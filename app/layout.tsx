@@ -7,8 +7,8 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
-  title: "Rooh da Safar — Make room for what matters",
-  description: "A thoughtful workspace for daily reflection, spiritual practice, and guidance rooted in Sikh teachings.",
+  title: "Rooh da Safar — Apni rooh layi thaan banao",
+  description: "Roz di soch, simran, te Sikh rehat ton prerit jeevan layi ik sohna digital saathi.",
   viewport: "width=device-width, initial-scale=1",
   themeColor: "#f9f8f4",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Rooh da Safar" },
@@ -16,7 +16,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="pa" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           {children}
